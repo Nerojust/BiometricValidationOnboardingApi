@@ -22,7 +22,7 @@ const validateLogin = [
 ];
 
 // Login user
-router.post('/login', validateLogin, async (req, res) => {
+router.post('/login', async (req, res) => {
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -33,6 +33,18 @@ router.post('/login', validateLogin, async (req, res) => {
     const { username, password, fingerprintkey } = req.body;
 
     try {
+        if (!username) {
+            return res.status(400).json({ message: 'Username is required' });
+        }
+
+        if (!password) {
+            return res.status(400).json({ message: 'Password is required' });
+        }
+
+        if (!fingerprintkey) {
+            return res.status(400).json({ message: 'Fingerprint key is required' });
+        }
+
         // Find the user by username
         const user = await User.findOne({ username: username });
 
@@ -40,13 +52,16 @@ router.post('/login', validateLogin, async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        if (password && user.password === password) {
-            return res.json({ message: 'Login successful', user });
-        } else if (fingerprintkey && user.fingerprintkey === fingerprintkey) {
-            return res.json({ message: 'Login successful', user });
-        } else {
-            return res.status(400).json({ message: 'Invalid credentials' });
+        if (user.password =!password) {
+            return res.status(400).json({ message: 'Invalid password' });
         }
+
+        if (user.fingerprintkey =! fingerprintkey) {
+            return res.status(400).json({ message: 'Invalid fingerprint' });
+        }
+
+        return res.json({ message: 'Login successful', user });
+
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -60,11 +75,32 @@ router.post('/register', validateRegistration, async (req, res) => {
         return res.status(400).json({ errors: errors.array() });
     }
 
+    const { username, password, phoneNumber, firstName, lastName } = req.body;
+    if (!username) {
+        return res.status(400).json({ message: 'Username is required' });
+    }
+
+    if (!password) {
+        return res.status(400).json({ message: 'Password is required' });
+    }
+    if (!phoneNumber) {
+        return res.status(400).json({ message: 'phoneNumber is required' });
+    }
+
+    if (!firstName) {
+        return res.status(400).json({ message: 'firstName is required' });
+    }
+
+    if (!lastName) {
+        return res.status(400).json({ message: 'lastName is required' });
+    }
+
     try {
         // Create a new User instance and save it to the database
-        const newUser = new User(req.body);
-        const user = await newUser.save();
-        res.status(201).json(user);
+        // const newUser = new User(req.body);
+        // const user = await newUser.save();
+
+        res.status(201).json({ message: "Registration Successful", user: "user" });
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
@@ -94,6 +130,22 @@ router.delete('/:id', async (req, res) => {
     try {
         // Find and delete the user by ID
         const deletedUser = await User.findByIdAndRemove(id);
+        if (!deletedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json({ message: 'User deleted' });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+});
+
+// Delete user by ID
+router.delete('/:username', async (req, res) => {
+    const { username } = req.params;
+
+    try {
+        // Find and delete the user by ID
+        const deletedUser = await User.findOneAndRemove(username);
         if (!deletedUser) {
             return res.status(404).json({ message: 'User not found' });
         }
