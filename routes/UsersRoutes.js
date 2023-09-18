@@ -6,19 +6,19 @@ const User = require('../models/User'); // Import the User model
 
 // Validation middleware for user registration
 const validateRegistration = [
-    body('firstname').notEmpty().withMessage('First name is required'),
-    body('lastname').notEmpty().withMessage('Last name is required'),
-    body('phonenumber').isMobilePhone('any', { strictMode: false }).withMessage('Invalid phone number'),
+    body('firstName').notEmpty().withMessage('First name is required'),
+    body('lastName').notEmpty().withMessage('Last name is required'),
+    body('phoneNumber').isMobilePhone('any', { strictMode: false }).withMessage('Invalid phone number'),
     body('username').notEmpty().withMessage('Username is required'),
     body('password').notEmpty().withMessage('Password is required'),
-    body('fingerprintkey').optional({ nullable: true }).isLength({ min: 10 }).withMessage('Fingerprint key must be at least 10 characters long'),
+    body('fingerPrintKey').optional({ nullable: true }).isLength({ min: 10 }).withMessage('Fingerprint key must be at least 10 characters long'),
 ];
 
 // Validation middleware for login
 const validateLogin = [
     body('username').notEmpty().withMessage('Username is required'),
     body('password').optional({ nullable: true }),
-    body('fingerprintkey').optional({ nullable: true }),
+    body('fingerPrintKey').optional({ nullable: true }),
 ];
 
 // Login user
@@ -30,7 +30,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Extract credentials from request body
-    const { username, password, fingerprintkey } = req.body;
+    const { username, password, fingerPrintKey } = req.body;
 
     try {
         if (!username) {
@@ -41,7 +41,7 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Password is required' });
         }
 
-        if (!fingerprintkey) {
+        if (!fingerPrintKey) {
             return res.status(400).json({ message: 'Fingerprint key is required' });
         }
 
@@ -52,11 +52,11 @@ router.post('/login', async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        if (user.password =!password) {
+        if (user.password = !password) {
             return res.status(400).json({ message: 'Invalid password' });
         }
 
-        if (user.fingerprintkey =! fingerprintkey) {
+        if (user.fingerPrintKey = !fingerPrintKey) {
             return res.status(400).json({ message: 'Invalid fingerprint' });
         }
 
@@ -74,8 +74,8 @@ router.post('/register', validateRegistration, async (req, res) => {
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
-
-    const { username, password, phoneNumber, firstName, lastName } = req.body;
+    console.log("About to register user with payload", req.body)
+    const { username, password, phoneNumber, firstName, lastName, fingerPrintKey } = req.body;
     if (!username) {
         return res.status(400).json({ message: 'Username is required' });
     }
@@ -84,24 +84,26 @@ router.post('/register', validateRegistration, async (req, res) => {
         return res.status(400).json({ message: 'Password is required' });
     }
     if (!phoneNumber) {
-        return res.status(400).json({ message: 'phoneNumber is required' });
+        return res.status(400).json({ message: 'PhoneNumber is required' });
     }
 
     if (!firstName) {
-        return res.status(400).json({ message: 'firstName is required' });
+        return res.status(400).json({ message: 'FirstName is required' });
     }
 
     if (!lastName) {
-        return res.status(400).json({ message: 'lastName is required' });
+        return res.status(400).json({ message: 'LastName is required' });
     }
 
     try {
         // Create a new User instance and save it to the database
-        // const newUser = new User(req.body);
-        // const user = await newUser.save();
+        const newUser = new User(req.body);
+        const user = await newUser.save();
 
-        res.status(201).json({ message: "Registration Successful", user: "user" });
+        console.log("Registration successful", user)
+        res.status(201).json({ message: "Registration Successful", user: user });
     } catch (error) {
+        console.log("Error registering user", error.message)
         res.status(400).json({ message: error.message });
     }
 });
