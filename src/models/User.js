@@ -29,6 +29,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    deviceId: {
+        type: String,
+        required: false,
+    },
     fingerPrintKey: {
         type: String,
         minlength: 10,
