@@ -4,6 +4,9 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 const bodyParser = require("body-parser");
 const usersRouter = require("./src/routes/UsersRoutes");
+const eventsRouter = require("./src/routes/EventRoutes");
+const roleRouter = require("./src/routes/RoleRoutes");
+
 const generalResponse = require("./src/utils/ResponseComponent");
 
 const app = express();
@@ -25,7 +28,9 @@ app.use(bodyParser.json());
 //for response to every request
 app.use(generalResponse);
 // Routes
-app.use("/users", usersRouter);
+app.use("/api/v1/users", usersRouter);
+app.use("/api/v1/events", eventsRouter);
+app.use("/api/v1/roles", roleRouter);
 
 // Start the server
 const PORT = process.env.PORT || 3000;

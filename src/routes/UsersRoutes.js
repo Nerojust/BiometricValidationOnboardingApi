@@ -4,6 +4,8 @@ const router = express.Router();
 const { body, validationResult } = require("express-validator");
 const User = require("../models/User"); // Import the User model
 const logger = require("../utils/Logger");
+const { generateToken, verifyToken } = require("../utils/auth/Authentication");
+const { removeSensitiveDataFromObject } = require("../utils/Utils");
 
 // Validation middleware for user registration
 const validateRegistration = [
@@ -56,23 +58,31 @@ router.post("/login", async (req, res) => {
     // Find the user by username
     const user = await User.findOne({ username: username });
 
+    if (!user) {
+      res.errorResponse("User not found", username);
+      return;
+    }
+
     logger.info("found the user");
 
-    if (!user) {
-      res.errorResponse("User not found");
-      return;
-    }
-
     if (user.password !== password) {
-      res.errorResponseWithCode(401, "Invalid password");
+      res.errorResponse("Invalid password", 401);
       return;
     }
+    //since it is optional do a check for it
+    if (user.fingerPrintKey && user.fingerPrintKey !== fingerPrintKey) {
+      res.errorResponse("Invalid fingerprint", 401);
+      return;
+    }
+    // Generate a JWT token and send it in the response
+    user.accessToken = generateToken(user);
+    // Convert user to a plain JavaScript object and remove the password field
+    const userObject = user.toObject();
+    delete userObject.password;
+    delete userObject.fingerPrintKey;
+    delete userObject.__v;
 
-    if (user.fingerPrintKey !== fingerPrintKey) {
-      res.errorResponseWithCode(401, "Invalid fingerprint");
-      return;
-    }
-    res.successResponse(user);
+    res.successResponse(userObject);
   } catch (error) {
     res.errorResponse(error.message);
   }
@@ -80,11 +90,6 @@ router.post("/login", async (req, res) => {
 
 // Register a new user
 router.post("/register", validateRegistration, async (req, res) => {
-  // Check for validation errors
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
   logger.info("About to register user with payload", req.body);
   const {
     username,
@@ -95,39 +100,64 @@ router.post("/register", validateRegistration, async (req, res) => {
     fingerPrintKey,
   } = req.body;
   if (!username) {
-    return res.status(400).json({ message: "Username is required" });
+    res.errorResponse("Username is required");
+    return;
   }
 
   if (!password) {
-    return res.status(400).json({ message: "Password is required" });
+    res.errorResponse("Password is required");
+    return;
   }
+
   if (!phoneNumber) {
-    return res.status(400).json({ message: "PhoneNumber is required" });
+    res.errorResponse("Phone Number is required");
+    return;
   }
 
   if (!firstName) {
-    return res.status(400).json({ message: "FirstName is required" });
+    res.errorResponse("FirstName is required");
+    return;
   }
 
   if (!lastName) {
-    return res.status(400).json({ message: "LastName is required" });
+    res.errorResponse("LastName is required");
+    return;
   }
 
+  // Find the user by username
+  const user = await User.findOne({
+    username: username,
+  });
+
+  if (user) {
+    res.errorResponse("Username already exists: " + username);
+    return;
+  }
+
+  // Find the user by username
+  const user1 = await User.findOne({
+    phoneNumber: phoneNumber,
+  });
+
+  if (user1) {
+    res.errorResponse("Phone number already exists: " + phoneNumber);
+    return;
+  }
   try {
     // Create a new User instance and save it to the database
-    const newUser = new User(req.body);
-    const user = await newUser.save();
-
-    console.log("Registration successful", user);
-    res.status(201).json({ message: "Registration Successful", user: user });
+    const user = await new User(req.body).save();
+    res.successResponse(
+      removeSensitiveDataFromObject(user),
+      201,
+      "Registration Successful"
+    );
   } catch (error) {
-    console.log("Error registering user", error.message);
-    res.status(400).json({ message: error.message });
+    res.errorResponse(error.message);
   }
 });
 
 // Update user by ID
-router.put("/:id", async (req, res) => {
+router.put("/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const updateData = req.body;
 
@@ -146,7 +176,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // Delete user by ID
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
 
   try {
