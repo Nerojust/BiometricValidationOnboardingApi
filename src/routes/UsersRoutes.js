@@ -5,7 +5,6 @@ const { body, validationResult } = require("express-validator");
 const User = require("../models/User"); // Import the User model
 const logger = require("../utils/Logger");
 const { generateToken, verifyToken } = require("../utils/auth/Authentication");
-const { removeSensitiveDataFromObject } = require("../utils/Utils");
 
 // Validation middleware for user registration
 const validateRegistration = [
@@ -49,10 +48,10 @@ router.post("/login", async (req, res) => {
       return;
     }
 
-    if (!fingerPrintKey) {
-      res.errorResponse("Fingerprint key is required");
-      return;
-    }
+    // if (!fingerPrintKey) {
+    //   res.errorResponse("Fingerprint key is required");
+    //   return;
+    // }
     logger.info("request body validated");
 
     // Find the user by username
@@ -70,10 +69,10 @@ router.post("/login", async (req, res) => {
       return;
     }
     //since it is optional do a check for it
-    if (user.fingerPrintKey && user.fingerPrintKey !== fingerPrintKey) {
-      res.errorResponse("Invalid fingerprint", 401);
-      return;
-    }
+    // if (user.fingerPrintKey && user.fingerPrintKey !== fingerPrintKey) {
+    //   res.errorResponse("Invalid fingerprint", 401);
+    //   return;
+    // }
     // Generate a JWT token and send it in the response
     user.accessToken = generateToken(user);
     // Convert user to a plain JavaScript object and remove the password field
@@ -146,11 +145,9 @@ router.post("/register", validateRegistration, async (req, res) => {
   try {
     // Create a new User instance and save it to the database
     const user = await new User(req.body).save();
-    res.successResponse(
-      removeSensitiveDataFromObject(user),
-      201,
-      "Registration Successful"
-    );
+    const userObject = removeSensitiveDataFromObject(user);
+
+    res.successResponse(userObject, 201, "Registration Successful");
   } catch (error) {
     res.errorResponse(error.message);
   }
@@ -192,7 +189,7 @@ router.delete("/:id", verifyToken, async (req, res) => {
 });
 
 // Delete user by ID
-router.delete("/:username", async (req, res) => {
+router.delete("/:username", verifyToken, async (req, res) => {
   const { username } = req.params;
 
   try {
@@ -210,3 +207,11 @@ router.delete("/:username", async (req, res) => {
 // ... (Login route and other routes with validation)
 
 module.exports = router;
+
+function removeSensitiveDataFromObject(user) {
+  const userObject = user.toObject();
+  delete userObject.password;
+  delete userObject.fingerPrintKey;
+  delete userObject.__v;
+  return userObject;
+}
