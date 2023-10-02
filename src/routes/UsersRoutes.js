@@ -31,6 +31,14 @@ const validateLogin = [
   body("fingerPrintKey").optional({ nullable: true }),
 ];
 
+function removeSensitiveDataFromObject(user) {
+  const userObject = user.toObject();
+  delete userObject.password;
+  delete userObject.fingerPrintKey;
+  delete userObject.__v;
+  return userObject;
+}
+
 //get all events
 router.get("/", async (req, res) => {
   try {
@@ -42,10 +50,11 @@ router.get("/", async (req, res) => {
 });
 
 // Login user
-router.post("/login",validateLogin, async (req, res) => {
+router.post("/login", async (req, res) => {
   // Extract credentials from request body
   const { username, password, fingerPrintKey } = req.body;
   logger.info("About to login username " + username);
+
   try {
     if (!username) {
       res.errorResponse("Username is required");
@@ -74,15 +83,16 @@ router.post("/login",validateLogin, async (req, res) => {
     }
 
     if (user.password !== password) {
-      res.errorResponse(401, "Invalid password");
+      res.errorResponse("Invalid password", 401);
       return;
     }
 
     if (user.fingerPrintKey !== fingerPrintKey) {
-      res.errorResponse(401, "Invalid fingerprint");
+      res.errorResponse("Invalid fingerprint", 401);
       return;
     }
-    res.successResponse(user);
+    
+    res.successResponse(removeSensitiveDataFromObject(user));
   } catch (error) {
     res.errorResponse(error.message);
   }
@@ -147,7 +157,11 @@ router.post("/register", validateRegistration, async (req, res) => {
     const newUser = new User(req.body);
     const user = await newUser.save();
 
-    res.successResponse(user,201, "Registration Successful",);
+    res.successResponse(
+      removeSensitiveDataFromObject(user),
+      201,
+      "Registration Successful"
+    );
   } catch (error) {
     res.errorResponse(error.message);
   }

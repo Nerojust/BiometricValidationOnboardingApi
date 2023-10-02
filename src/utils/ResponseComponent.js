@@ -15,11 +15,23 @@ const generateResponse = (
   };
 };
 
+// {
+//   "message": "Successful",
+//   "success": true,
+//   "result": {
+//       "_id": "651b21e124b354a9d467bda6",
+//       "firstName": "Innocent",
+//       "lastName": "Omiji",
+//       "phoneNumber": "08012345679",
+//       "username": "garren"
+//   },
+//   "errors": []
+// }
 // Middleware function to format responses
 const formatResponse = (req, res, next) => {
   // Create a successResponse function that wraps the result
-  res.successResponse = (result, code = 200, message = Status.SUCCESS) => {
-    const response = generateResponse(true, result, [], message);
+  res.successResponse = (result, code = 200) => {
+    const response = generateResponse(true, result);
     logger.info("Success Response:", response); // Log the response
     res.status(code).json(response);
   };
