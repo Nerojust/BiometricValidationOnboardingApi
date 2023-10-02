@@ -25,7 +25,7 @@ app.use(bodyParser.json());
 //for response to every request
 app.use(generalResponse);
 // Routes
-app.use("/users", usersRouter);
+app.use("api/v1/users", usersRouter);
 
 // Start the server
 const PORT = process.env.PORT || 3000;
