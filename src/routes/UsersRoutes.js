@@ -42,7 +42,7 @@ router.get("/", async (req, res) => {
 });
 
 // Login user
-router.post("/login", async (req, res) => {
+router.post("/login",validateLogin, async (req, res) => {
   // Extract credentials from request body
   const { username, password, fingerPrintKey } = req.body;
   logger.info("About to login username " + username);
@@ -74,12 +74,12 @@ router.post("/login", async (req, res) => {
     }
 
     if (user.password !== password) {
-      res.errorResponseWithCode(401, "Invalid password");
+      res.errorResponse(401, "Invalid password");
       return;
     }
 
     if (user.fingerPrintKey !== fingerPrintKey) {
-      res.errorResponseWithCode(401, "Invalid fingerprint");
+      res.errorResponse(401, "Invalid fingerprint");
       return;
     }
     res.successResponse(user);
@@ -105,22 +105,28 @@ router.post("/register", validateRegistration, async (req, res) => {
     fingerPrintKey,
   } = req.body;
   if (!username) {
-    return res.status(400).json({ message: "Username is required" });
+    res.errorResponse("Username is required");
+    return;
   }
 
   if (!password) {
-    return res.status(400).json({ message: "Password is required" });
+    res.errorResponse("Password is required");
+    return;
   }
+
   if (!phoneNumber) {
-    return res.status(400).json({ message: "PhoneNumber is required" });
+    res.errorResponse("Phone Number is required");
+    return;
   }
 
   if (!firstName) {
-    return res.status(400).json({ message: "FirstName is required" });
+    res.errorResponse("FirstName is required");
+    return;
   }
 
   if (!lastName) {
-    return res.status(400).json({ message: "LastName is required" });
+    res.errorResponse("LastName is required");
+    return;
   }
 
   // Find the user by username and check if he exists
@@ -130,7 +136,7 @@ router.post("/register", validateRegistration, async (req, res) => {
     return;
   }
   //also check if his phone number exists before
-  const userWithPhoneNumber = await User.findOne({ username: phoneNumber });
+  const userWithPhoneNumber = await User.findOne({ phoneNumber: phoneNumber });
   if (userWithPhoneNumber) {
     res.errorResponse("Phone number already exists.");
     return;
@@ -141,7 +147,7 @@ router.post("/register", validateRegistration, async (req, res) => {
     const newUser = new User(req.body);
     const user = await newUser.save();
 
-    res.successResponse(user, "Registration Successful", 201);
+    res.successResponse(user,201, "Registration Successful",);
   } catch (error) {
     res.errorResponse(error.message);
   }
