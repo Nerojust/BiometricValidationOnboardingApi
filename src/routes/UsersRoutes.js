@@ -31,6 +31,16 @@ const validateLogin = [
   body("fingerPrintKey").optional({ nullable: true }),
 ];
 
+//get all events
+router.get("/", async (req, res) => {
+  try {
+    const users = await User.find();
+    res.successResponse(users);
+  } catch (error) {
+    res.errorResponse(error.message);
+  }
+});
+
 // Login user
 router.post("/login", async (req, res) => {
   // Extract credentials from request body
@@ -111,6 +121,17 @@ router.post("/register", validateRegistration, async (req, res) => {
 
   if (!lastName) {
     return res.status(400).json({ message: "LastName is required" });
+  }
+
+  // Find the user by username and check if he exists
+  const user = await User.findOne({ username: username });
+  if (user) {
+    res.errorResponse("User already exists.");
+  }
+  //also check if his phone number exists before
+  const userWithPhoneNumber = await User.findOne({ username: phoneNumber });
+  if (userWithPhoneNumber) {
+    res.errorResponse("Phone number already exists.");
   }
 
   try {
