@@ -1,19 +1,19 @@
 const mongoose = require("mongoose");
 
-const rolePermissionSchema = new mongoose.Schema({
-  roleName: {
+// Define a Role Schema
+const roleSchema = new mongoose.Schema({
+  name: {
     type: String,
     required: true,
-    unique: true,
+    unique: true, // Each role should have a unique name
   },
-  permissions: [
-    {
-      type: String,
-      required: true,
-    },
-  ],
+  permissions: {
+    type: [String], // An array of permissions associated with this role
+    default: [], // You can define default permissions for a role
+  },
 });
 
-const RolePermission = mongoose.model("Roles", rolePermissionSchema);
+// Create a Role model based on the schema
+const Role = mongoose.model("Roles", roleSchema);
 
-module.exports = RolePermission;
+module.exports = Role;

@@ -47,12 +47,12 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     required: false,
-    default: "Member",
+    default: "User",
   },
 
   fingerPrintKey: {
     type: String,
-    minlength: 10,
+    // minlength: 10,
   },
 });
 

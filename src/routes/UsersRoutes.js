@@ -15,10 +15,10 @@ const validateRegistration = [
     .withMessage("Invalid phone number"),
   body("username").notEmpty().withMessage("Username is required"),
   body("password").notEmpty().withMessage("Password is required"),
-  body("fingerPrintKey")
-    .optional({ nullable: true })
-    .isLength({ min: 10 })
-    .withMessage("Fingerprint key must be at least 10 characters long"),
+  // body("fingerPrintKey")
+  //   .optional({ nullable: true })
+  //   .isLength({ min: 10 })
+  //   .withMessage("Fingerprint key must be at least 10 characters long"),
 ];
 
 // Validation middleware for login
@@ -31,6 +31,8 @@ const validateLogin = [
     .withMessage("Password must be at least 6 characters long"),
   body("fingerPrintKey").optional({ nullable: true }),
 ];
+
+
 
 // Login user
 router.post("/login", async (req, res) => {
@@ -75,20 +77,15 @@ router.post("/login", async (req, res) => {
     // }
     // Generate a JWT token and send it in the response
     user.accessToken = generateToken(user);
-    // Convert user to a plain JavaScript object and remove the password field
-    const userObject = user.toObject();
-    delete userObject.password;
-    delete userObject.fingerPrintKey;
-    delete userObject.__v;
 
-    res.successResponse(userObject);
+    res.successResponse(removeSensitiveDataFromObject(user));
   } catch (error) {
     res.errorResponse(error.message);
   }
 });
 
 // Register a new user
-router.post("/register", validateRegistration, async (req, res) => {
+router.post("/register", async (req, res) => {
   logger.info("About to register user with payload", req.body);
   const {
     username,
@@ -145,9 +142,22 @@ router.post("/register", validateRegistration, async (req, res) => {
   try {
     // Create a new User instance and save it to the database
     const user = await new User(req.body).save();
-    const userObject = removeSensitiveDataFromObject(user);
 
-    res.successResponse(userObject, 201, "Registration Successful");
+    res.successResponse(
+      removeSensitiveDataFromObject(user),
+      201,
+      "Registration Successful"
+    );
+  } catch (error) {
+    res.errorResponse(error.message);
+  }
+});
+
+//get all events
+router.get("/", verifyToken, async (req, res) => {
+  try {
+    const users = await User.find();
+    res.successResponse(users);
   } catch (error) {
     res.errorResponse(error.message);
   }
@@ -190,11 +200,11 @@ router.delete("/:id", verifyToken, async (req, res) => {
 
 // Delete user by ID
 router.delete("/:username", verifyToken, async (req, res) => {
-  const { username } = req.params;
+  const { customerId } = req.params;
 
   try {
     // Find and delete the user by ID
-    const deletedUser = await User.findOneAndRemove(username);
+    const deletedUser = await User.findOneAndRemove(customerId);
     if (!deletedUser) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -203,8 +213,6 @@ router.delete("/:username", verifyToken, async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 });
-
-// ... (Login route and other routes with validation)
 
 module.exports = router;
 

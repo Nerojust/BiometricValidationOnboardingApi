@@ -1,126 +1,79 @@
+// rolesRoutes.js
+
 const express = require("express");
-const { check, validationResult } = require("express-validator");
 const router = express.Router();
-const RoleRoutes = require("../models/Roles");
+const Role = require("../models/Roles"); // Import the Role model
 const logger = require("../utils/Logger");
+const {
+  verifySuperAdminAccessAndToken,
+} = require("../utils/auth/Authentication");
 
-// Create a new role permission
-router.post(
-  "/",
-  [
-    check("roleName", "Role name is required").not().isEmpty(),
-    check("permissions", "Permissions are required").isArray({ min: 1 }),
-  ],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { roleName, permissions } = req.body;
-
-    try {
-      let rolePermission = await RolePermission.findOne({ roleName });
-
-      if (rolePermission) {
-        return res
-          .status(400)
-          .json({ errors: [{ msg: "Role permission already exists" }] });
-      }
-
-      rolePermission = new RolePermission({ roleName, permissions });
-      await rolePermission.save();
-
-      res.json(rolePermission);
-    } catch (err) {
-      console.error(err.message);
-      res.status(500).send("Server Error");
-    }
-  }
-);
-
-// Get all role permissions
-router.get("/", async (req, res) => {
-  logger.info("About to get all roles");
+// Create a new role
+router.post("/", verifySuperAdminAccessAndToken, async (req, res) => {
   try {
-    const rolePermissions = await RoleRoutes.find();
-    res.successResponse(rolePermissions);
-    // res.json(rolePermissions);
-  } catch (err) {
+    const { name, permissions } = req.body;
+    const role = new Role({ name, permissions });
+    await role.save();
+    res.successResponse(role, 201);
+  } catch (error) {
     res.errorResponse(error.message);
-    // res.status(500).send("Server Error");
   }
 });
 
-// Get a single role permission by ID
-router.get("/:id", async (req, res) => {
+// Get all roles
+router.get("/", async (req, res) => {
   try {
-    const rolePermission = await RolePermission.findById(req.params.id);
-
-    if (!rolePermission) {
-      return res.status(404).json({ msg: "Role permission not found" });
-    }
-
-    res.json(rolePermission);
-  } catch (err) {
-    console.error(err.message);
-
-    if (err.kind === "ObjectId") {
-      return res.status(404).json({ msg: "Role permission not found" });
-    }
-
-    res.status(500).send("Server Error");
+    const roles = await Role.find();
+    res.successResponse(roles);
+  } catch (error) {
+    res.errorResponse(error.message);
   }
 });
 
-// Update a role permission by ID
-router.put("/:id", async (req, res) => {
-  const { roleName, permissions } = req.body;
-
+// Get a specific role by ID
+router.get("/:roleId", async (req, res) => {
+  const { roleId } = req.params;
   try {
-    let rolePermission = await RolePermission.findById(req.params.id);
-
-    if (!rolePermission) {
-      return res.status(404).json({ msg: "Role permission not found" });
+    const role = await Role.findById(roleId);
+    if (!role) {
+      return res.status(404).json({ error: "Role not found" });
     }
-
-    rolePermission.roleName = roleName;
-    rolePermission.permissions = permissions;
-
-    await rolePermission.save();
-
-    res.json(rolePermission);
-  } catch (err) {
-    console.error(err.message);
-
-    if (err.kind === "ObjectId") {
-      return res.status(404).json({ msg: "Role permission not found" });
-    }
-
-    res.status(500).send("Server Error");
+    res.json(role);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Delete a role permission by ID
-router.delete("/:id", async (req, res) => {
+// Update a role by ID
+router.put("/:roleId", async (req, res) => {
+  const { roleId } = req.params;
+  const { name, permissions } = req.body;
   try {
-    const rolePermission = await RolePermission.findById(req.params.id);
-
-    if (!rolePermission) {
-      return res.status(404).json({ msg: "Role permission not found" });
+    const role = await Role.findByIdAndUpdate(
+      roleId,
+      { name, permissions },
+      { new: true }
+    );
+    if (!role) {
+      return res.status(404).json({ error: "Role not found" });
     }
+    res.json(role);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-    await rolePermission.remove();
-
-    res.json({ msg: "Role permission removed" });
-  } catch (err) {
-    console.error(err.message);
-
-    if (err.kind === "ObjectId") {
-      return res.status(404).json({ msg: "Role permission not found" });
+// Delete a role by ID
+router.delete("/:roleId", async (req, res) => {
+  const { roleId } = req.params;
+  try {
+    const role = await Role.findByIdAndRemove(roleId);
+    if (!role) {
+      return res.status(404).json({ error: "Role not found" });
     }
-
-    res.status(500).send("Server Error");
+    res.json({ message: "Role deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

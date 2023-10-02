@@ -69,9 +69,11 @@ router.put("/:id", verifyToken, async (req, res) => {
     const event = await Event.findByIdAndUpdate(req.params.id, req.body, {
       new: true, // Return the updated event
     });
+
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
+
     res.json(event);
   } catch (error) {
     console.error(error);
