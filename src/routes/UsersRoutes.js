@@ -127,11 +127,13 @@ router.post("/register", validateRegistration, async (req, res) => {
   const user = await User.findOne({ username: username });
   if (user) {
     res.errorResponse("User already exists.");
+    return;
   }
   //also check if his phone number exists before
   const userWithPhoneNumber = await User.findOne({ username: phoneNumber });
   if (userWithPhoneNumber) {
     res.errorResponse("Phone number already exists.");
+    return;
   }
 
   try {
@@ -139,11 +141,9 @@ router.post("/register", validateRegistration, async (req, res) => {
     const newUser = new User(req.body);
     const user = await newUser.save();
 
-    console.log("Registration successful", user);
-    res.status(201).json({ message: "Registration Successful", user: user });
+    res.successResponse(user, "Registration Successful", 201);
   } catch (error) {
-    console.log("Error registering user", error.message);
-    res.status(400).json({ message: error.message });
+    res.errorResponse(error.message);
   }
 });
 
