@@ -4,15 +4,28 @@ const express = require("express");
 const router = express.Router();
 const Role = require("../models/Roles"); // Import the Role model
 const logger = require("../utils/Logger");
-const {
-  verifySuperAdminAccessAndToken,
-} = require("../utils/auth/Authentication");
+const { verifyAccessRole } = require("../utils/auth/Authentication");
 
 // Create a new role
-router.post("/", verifySuperAdminAccessAndToken, async (req, res) => {
+router.post("/", verifyAccessRole, async (req, res) => {
   try {
+    console.log("Role body", req.body);
     const { name, permissions } = req.body;
-    const role = new Role({ name, permissions });
+
+    if (!name) {
+      res.errorResponse("Role name is required");
+      return;
+    }
+    if (
+      !permissions.some(
+        (permission) => permission.resource && permission.actions.length > 0
+      )
+    ) {
+      res.errorResponse("At least one permission is required");
+      return;
+    }
+
+    const role = new Role(req.body);
     await role.save();
     res.successResponse(role, 201);
   } catch (error) {
@@ -31,49 +44,67 @@ router.get("/", async (req, res) => {
 });
 
 // Get a specific role by ID
-router.get("/:roleId", async (req, res) => {
-  const { roleId } = req.params;
+router.get("/", async (req, res) => {
+  const { id } = req.query;
   try {
-    const role = await Role.findById(roleId);
+    const role = await Role.findById(id);
     if (!role) {
       return res.status(404).json({ error: "Role not found" });
     }
-    res.json(role);
+    res.successResponse(role);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.errorResponse(error.message);
   }
 });
 
 // Update a role by ID
-router.put("/:roleId", async (req, res) => {
-  const { roleId } = req.params;
+router.put("/", async (req, res) => {
+  const { id } = req.query;
   const { name, permissions } = req.body;
+
+  if (!name) {
+    res.errorResponse("Role name is required");
+    return;
+  }
+  if (
+    !permissions.some(
+      (permission) => permission.resource && permission.actions.length > 0
+    )
+  ) {
+    res.errorResponse("At least one permission is required");
+    return;
+  }
+
   try {
     const role = await Role.findByIdAndUpdate(
-      roleId,
+      id,
       { name, permissions },
       { new: true }
     );
+
     if (!role) {
-      return res.status(404).json({ error: "Role not found" });
+      res.errorResponse("Role not found");
+      return;
     }
-    res.json(role);
+
+    res.successResponse(role);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.errorResponse(error.message);
   }
 });
 
 // Delete a role by ID
-router.delete("/:roleId", async (req, res) => {
-  const { roleId } = req.params;
+router.delete("/", async (req, res) => {
+  const { id } = req.query;
   try {
-    const role = await Role.findByIdAndRemove(roleId);
+    const role = await Role.findByIdAndRemove(id);
     if (!role) {
       return res.status(404).json({ error: "Role not found" });
     }
-    res.json({ message: "Role deleted successfully" });
+
+    res.successResponse("Role deleted successfully");
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.errorResponse(error.message);
   }
 });
 

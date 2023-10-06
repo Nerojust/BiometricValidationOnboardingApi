@@ -4,7 +4,11 @@ const router = express.Router();
 const { body, validationResult } = require("express-validator");
 const User = require("../models/User"); // Import the User model
 const logger = require("../utils/Logger");
-const { generateToken, verifyToken } = require("../utils/auth/Authentication");
+const {
+  generateToken,
+  verifyToken,
+  verifyCreateDeleteAccessRole,
+} = require("../utils/auth/Authentication");
 
 // Validation middleware for user registration
 const validateRegistration = [
@@ -32,8 +36,6 @@ const validateLogin = [
   body("fingerPrintKey").optional({ nullable: true }),
 ];
 
-
-
 // Login user
 router.post("/login", async (req, res) => {
   // Extract credentials from request body
@@ -50,17 +52,17 @@ router.post("/login", async (req, res) => {
       return;
     }
 
-    // if (!fingerPrintKey) {
-    //   res.errorResponse("Fingerprint key is required");
-    //   return;
-    // }
+    if (!fingerPrintKey) {
+      res.errorResponse("Fingerprint key is required");
+      return;
+    }
     logger.info("request body validated");
 
     // Find the user by username
     const user = await User.findOne({ username: username });
 
     if (!user) {
-      res.errorResponse("User not found", username);
+      res.errorResponse("User not found", 401);
       return;
     }
 
@@ -70,11 +72,13 @@ router.post("/login", async (req, res) => {
       res.errorResponse("Invalid password", 401);
       return;
     }
+    console.log("Fingerprint from DB: ", user.fingerPrintKey);
+    console.log("Fingerprint from client:", fingerPrintKey);
     //since it is optional do a check for it
-    // if (user.fingerPrintKey && user.fingerPrintKey !== fingerPrintKey) {
-    //   res.errorResponse("Invalid fingerprint", 401);
-    //   return;
-    // }
+    if (user.fingerPrintKey && user.fingerPrintKey !== fingerPrintKey) {
+      res.errorResponse("Invalid fingerprint", 401);
+      return;
+    }
     // Generate a JWT token and send it in the response
     user.accessToken = generateToken(user);
 
@@ -140,6 +144,7 @@ router.post("/register", async (req, res) => {
     return;
   }
   try {
+    fingerPrintKey.trim();
     // Create a new User instance and save it to the database
     const user = await new User(req.body).save();
 
@@ -183,43 +188,53 @@ router.put("/:id", verifyToken, async (req, res) => {
 });
 
 // Delete user by ID
-router.delete("/:id", verifyToken, async (req, res) => {
-  const { id } = req.params;
+router.delete(
+  "/:id",
+  verifyToken,
+  verifyCreateDeleteAccessRole,
+  async (req, res) => {
+    const { id } = req.params;
 
-  try {
-    // Find and delete the user by ID
-    const deletedUser = await User.findByIdAndRemove(id);
-    if (!deletedUser) {
-      return res.status(404).json({ message: "User not found" });
+    try {
+      // Find and delete the user by ID
+      const deletedUser = await User.findByIdAndRemove(id);
+      if (!deletedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json({ message: "User deleted" });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
     }
-    res.json({ message: "User deleted" });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
   }
-});
+);
 
 // Delete user by ID
-router.delete("/:username", verifyToken, async (req, res) => {
-  const { customerId } = req.params;
+router.delete(
+  "/:username",
+  verifyToken,
+  verifyCreateDeleteAccessRole,
+  async (req, res) => {
+    const { customerId } = req.params;
 
-  try {
-    // Find and delete the user by ID
-    const deletedUser = await User.findOneAndRemove(customerId);
-    if (!deletedUser) {
-      return res.status(404).json({ message: "User not found" });
+    try {
+      // Find and delete the user by ID
+      const deletedUser = await User.findOneAndRemove(customerId);
+      if (!deletedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json({ message: "User deleted" });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
     }
-    res.json({ message: "User deleted" });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
   }
-});
+);
 
 module.exports = router;
 
 function removeSensitiveDataFromObject(user) {
   const userObject = user.toObject();
   delete userObject.password;
-  delete userObject.fingerPrintKey;
+  // delete userObject.fingerPrintKey;
   delete userObject.__v;
   return userObject;
 }

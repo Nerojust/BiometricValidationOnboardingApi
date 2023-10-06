@@ -3,11 +3,14 @@ const express = require("express");
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
 const logger = require("../utils/Logger");
-const { verifyToken } = require("../utils/auth/Authentication");
+const {
+  verifyToken,
+  verifyAccessRole,
+} = require("../utils/auth/Authentication");
 const Event = require("../models/Event");
 
 //get all events
-router.get("/", verifyToken, async (req, res) => {
+router.get("/", verifyToken, verifyAccessRole, async (req, res) => {
   try {
     const events = await Event.find();
     res.successResponse(events);
@@ -16,7 +19,7 @@ router.get("/", verifyToken, async (req, res) => {
   }
 });
 
-router.post("/", verifyToken, async (req, res) => {
+router.post("/", verifyToken, verifyAccessRole, async (req, res) => {
   const { description, title } = req.body;
 
   if (!title) {

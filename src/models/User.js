@@ -33,6 +33,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  createdBy: {
+    type: String,
+    required: false,
+  },
   accessToken: {
     type: String,
     required: false,
@@ -47,12 +51,12 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     required: false,
-    default: "User",
+    default: "user",
   },
 
   fingerPrintKey: {
     type: String,
-    // minlength: 10,
+    minlength: 10,
   },
 });
 
