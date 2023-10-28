@@ -4,6 +4,8 @@ const router = express.Router();
 const { body, validationResult } = require("express-validator");
 const User = require("../models/User"); // Import the User model
 const logger = require("../utils/Logger");
+const bcrypt = require("bcrypt");
+
 const {
   generateToken,
   verifyToken,
@@ -52,10 +54,10 @@ router.post("/login", async (req, res) => {
       return;
     }
 
-    if (!fingerPrintKey) {
-      res.errorResponse("Fingerprint key is required");
-      return;
-    }
+    // if (!fingerPrintKey) {
+    //   res.errorResponse("Fingerprint key is required");
+    //   return;
+    // }
     logger.info("request body validated");
 
     // Find the user by username
@@ -72,17 +74,29 @@ router.post("/login", async (req, res) => {
       res.errorResponse("Invalid password", 401);
       return;
     }
-    console.log("Fingerprint from DB: ", user.fingerPrintKey);
-    console.log("Fingerprint from client:", fingerPrintKey);
-    //since it is optional do a check for it
-    if (user.fingerPrintKey && user.fingerPrintKey !== fingerPrintKey) {
-      res.errorResponse("Invalid fingerprint", 401);
-      return;
-    }
-    // Generate a JWT token and send it in the response
-    user.accessToken = generateToken(user);
 
-    res.successResponse(removeSensitiveDataFromObject(user));
+    // Compare the entered password with the stored hash
+    const passwordMatch = await bcrypt.compare(password, user.password);
+
+    if (passwordMatch) {
+      console.log("Fingerprint from DB: ", user.fingerPrintKey);
+      console.log("Fingerprint from client:", fingerPrintKey);
+      //since it is optional do a check for it
+      if (user.fingerPrintKey && user.fingerPrintKey !== fingerPrintKey) {
+        res.errorResponse("Invalid fingerprint", 401);
+        return;
+      }
+      // Generate a JWT token and send it in the response
+      user.accessToken = generateToken(user);
+
+      res.successResponse(
+        removeSensitiveDataFromObject(user),
+        200,
+        "Login Successful"
+      );
+    } else {
+      res.errorResponse("Invalid password", 401);
+    }
   } catch (error) {
     res.errorResponse(error.message);
   }
@@ -143,8 +157,16 @@ router.post("/register", async (req, res) => {
     res.errorResponse("Phone number already exists: " + phoneNumber);
     return;
   }
+
+  const saltRounds = 10; // You can adjust the number of rounds
+
+  // Hash the password using the salt
+  const hashedPassword = await bcrypt.hash(password, saltRounds);
+  console.log("hashed password", hashedPassword);
+  //now replace the password
+  req.body.password = hashedPassword;
+
   try {
-    fingerPrintKey.trim();
     // Create a new User instance and save it to the database
     const user = await new User(req.body).save();
 

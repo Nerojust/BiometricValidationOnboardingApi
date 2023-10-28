@@ -59,15 +59,14 @@ const verifyToken = (req, res, next) => {
 
 // Middleware to check if the user is a super admin
 const verifyAccessRole = async (req, res, next) => {
-  const user = await User.findOne({
-    _id: req.query.customerId,
-  });
+  console.log(req.query);
+  const user = await User.findById(req.query.customerId);
 
   if (!user) {
     res.errorResponse("User not found");
     return;
   }
-  const allowedRoles = process.env.ALLOWED_PERFORM_ACTION_ROLES.split(",");
+  const allowedRoles = process.env.ALLOWED_PEOPLE_TO_PERFORM_ACTION.split(",");
   const userRole = user.role;
   console.log("User's role is", userRole, "allowed roles are", allowedRoles);
   if (!allowedRoles.includes(userRole)) {
@@ -76,26 +75,6 @@ const verifyAccessRole = async (req, res, next) => {
   }
   next(); // Continue to the next middleware
 };
-
-// // Middleware to check if the user is a super admin
-// const verifyCreateDeleteAccessRole = async (req, res, next) => {
-//   const user = await User.findOne({
-//     _id: req.query.customerId,
-//   });
-
-//   if (!user) {
-//     res.errorResponse("User not found");
-//     return;
-//   }
-//   const allowedRoles = process.env.ALLOWED_CREATE_ROLES.split(",");
-//   const userRole = user.role;
-//   console.log("Users role is", userRole, "allowed roles are", allowedRoles);
-//   if (!allowedRoles.includes(userRole)) {
-//     res.errorResponse("Permission denied", 403);
-//     return;
-//   }
-//   next(); // Continue to the next middleware
-// };
 
 const verifyCreateDeleteAccessRole = async (req, res, next) => {
   const userId = req.query.customerId;
@@ -126,7 +105,8 @@ const verifyCreateDeleteAccessRole = async (req, res, next) => {
     const userPermissions = userRoleData.permissions;
 
     // Check if any of the user's permissions allow create/delete actions
-    const allowedActions = ["create", "delete"];
+    const allowedActions = process.env.ALLOWED_ACTIONS.split(",");
+
     const canCreateDelete = userPermissions.some((permission) =>
       permission.actions.some((action) => allowedActions.includes(action))
     );
@@ -142,8 +122,6 @@ const verifyCreateDeleteAccessRole = async (req, res, next) => {
     res.errorResponse("Internal Server Error", 500);
   }
 };
-
-module.exports = verifyCreateDeleteAccessRole;
 
 module.exports = {
   generateToken,

@@ -4,7 +4,11 @@ const express = require("express");
 const router = express.Router();
 const Role = require("../models/Roles"); // Import the Role model
 const logger = require("../utils/Logger");
-const { verifyAccessRole } = require("../utils/auth/Authentication");
+const {
+  verifyAccessRole,
+  verifyToken,
+  verifyCreateDeleteAccessRole,
+} = require("../utils/auth/Authentication");
 
 // Create a new role
 router.post("/", verifyAccessRole, async (req, res) => {
@@ -44,7 +48,7 @@ router.get("/", async (req, res) => {
 });
 
 // Get a specific role by ID
-router.get("/", async (req, res) => {
+router.get("/", verifyToken, async (req, res) => {
   const { id } = req.query;
   try {
     const role = await Role.findById(id);
@@ -56,9 +60,22 @@ router.get("/", async (req, res) => {
     res.errorResponse(error.message);
   }
 });
+// Get a specific role by ID
+router.get("/", verifyToken, async (req, res) => {
+  const { customerId } = req.query;
+  try {
+    const role = await Role.findById(customerId);
+    if (!role) {
+      return res.status(404).json({ error: "Role not found" });
+    }
+    res.successResponse(role);
+  } catch (error) {
+    res.errorResponse(error.message);
+  }
+});
 
 // Update a role by ID
-router.put("/", async (req, res) => {
+router.put("/", verifyToken, verifyAccessRole, async (req, res) => {
   const { id } = req.query;
   const { name, permissions } = req.body;
 
@@ -94,18 +111,23 @@ router.put("/", async (req, res) => {
 });
 
 // Delete a role by ID
-router.delete("/", async (req, res) => {
-  const { id } = req.query;
-  try {
-    const role = await Role.findByIdAndRemove(id);
-    if (!role) {
-      return res.status(404).json({ error: "Role not found" });
-    }
+router.delete(
+  "/",
+  verifyToken,
+  verifyCreateDeleteAccessRole,
+  async (req, res) => {
+    const { id } = req.query;
+    try {
+      const role = await Role.findByIdAndRemove(id);
+      if (!role) {
+        return res.status(404).json({ error: "Role not found" });
+      }
 
-    res.successResponse("Role deleted successfully");
-  } catch (error) {
-    res.errorResponse(error.message);
+      res.successResponse("Role deleted successfully");
+    } catch (error) {
+      res.errorResponse(error.message);
+    }
   }
-});
+);
 
 module.exports = router;
