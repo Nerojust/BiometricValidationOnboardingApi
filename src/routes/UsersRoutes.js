@@ -44,24 +44,22 @@ router.post("/login", async (req, res) => {
   const { username, password, fingerPrintKey } = req.body;
   logger.info("About to login username " + username);
   try {
-    if (!username) {
-      res.errorResponse("Username is required");
-      return;
-    }
+    const requiredFields = ["username", "password", "fingerPrintKey"];
 
-    if (!password) {
-      res.errorResponse("Password is required");
-      return;
+    for (const field of requiredFields) {
+      // Capitalize the first letter of the field name
+      const capitalizedField = field.charAt(0).toUpperCase() + field.slice(1);
+      
+      if (!req.body[field]) {
+        res.errorResponse(`${capitalizedField} is required`);
+        return;
+      }
     }
+    
 
-    if (!fingerPrintKey) {
-      res.errorResponse("Fingerprint key is required");
-      return;
-    }
-    logger.info("request body validated");
-
-    // Find the user by username
-    const user = await User.findOne({ username: username });
+    const user = await User.findOne({
+      $or: [{ username: username }, { fingerprint: fingerPrintKey }],
+    });
 
     if (!user) {
       res.errorResponse("User not found", 401);
@@ -110,11 +108,15 @@ router.post("/register", async (req, res) => {
     ];
 
     for (const field of requiredFields) {
+      // Capitalize the first letter of the field name
+      const capitalizedField = field.charAt(0).toUpperCase() + field.slice(1);
+      
       if (!req.body[field]) {
-        res.errorResponse(`${field} is required`);
+        res.errorResponse(`${capitalizedField} is required`);
         return;
       }
     }
+    
 
     // Check if a user with the same username or phone number already exists
     const existingUser = await User.findOne({
