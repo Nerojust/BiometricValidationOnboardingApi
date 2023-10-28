@@ -54,10 +54,10 @@ router.post("/login", async (req, res) => {
       return;
     }
 
-    // if (!fingerPrintKey) {
-    //   res.errorResponse("Fingerprint key is required");
-    //   return;
-    // }
+    if (!fingerPrintKey) {
+      res.errorResponse("Fingerprint key is required");
+      return;
+    }
     logger.info("request body validated");
 
     // Find the user by username
@@ -65,13 +65,6 @@ router.post("/login", async (req, res) => {
 
     if (!user) {
       res.errorResponse("User not found", 401);
-      return;
-    }
-
-    logger.info("found the user");
-
-    if (user.password !== password) {
-      res.errorResponse("Invalid password", 401);
       return;
     }
 
@@ -104,79 +97,59 @@ router.post("/login", async (req, res) => {
 
 // Register a new user
 router.post("/register", async (req, res) => {
-  logger.info("About to register user with payload", req.body);
-  const {
-    username,
-    password,
-    phoneNumber,
-    firstName,
-    lastName,
-    fingerPrintKey,
-  } = req.body;
-  if (!username) {
-    res.errorResponse("Username is required");
-    return;
-  }
-
-  if (!password) {
-    res.errorResponse("Password is required");
-    return;
-  }
-
-  if (!phoneNumber) {
-    res.errorResponse("Phone Number is required");
-    return;
-  }
-
-  if (!firstName) {
-    res.errorResponse("FirstName is required");
-    return;
-  }
-
-  if (!lastName) {
-    res.errorResponse("LastName is required");
-    return;
-  }
-
-  // Find the user by username
-  const user = await User.findOne({
-    username: username,
-  });
-
-  if (user) {
-    res.errorResponse("Username already exists: " + username);
-    return;
-  }
-
-  // Find the user by username
-  const user1 = await User.findOne({
-    phoneNumber: phoneNumber,
-  });
-
-  if (user1) {
-    res.errorResponse("Phone number already exists: " + phoneNumber);
-    return;
-  }
-
-  const saltRounds = 10; // You can adjust the number of rounds
-
-  // Hash the password using the salt
-  const hashedPassword = await bcrypt.hash(password, saltRounds);
-  console.log("hashed password", hashedPassword);
-  //now replace the password
-  req.body.password = hashedPassword;
-
   try {
-    // Create a new User instance and save it to the database
-    const user = await new User(req.body).save();
+    logger.info("About to register user with payload", req.body);
+
+    const { username, password, phoneNumber } = req.body;
+    const requiredFields = [
+      "username",
+      "password",
+      "phoneNumber",
+      "firstName",
+      "lastName",
+    ];
+
+    for (const field of requiredFields) {
+      if (!req.body[field]) {
+        res.errorResponse(`${field} is required`);
+        return;
+      }
+    }
+
+    // Check if a user with the same username or phone number already exists
+    const existingUser = await User.findOne({
+      $or: [{ username }, { phoneNumber }],
+    });
+
+    if (existingUser) {
+      const conflictField =
+        existingUser.username === username ? "Username" : "Phone number";
+      res.errorResponse(
+        `${conflictField} already exists: ${
+          conflictField === "Username" ? username : phoneNumber
+        }`,
+        409
+      );
+      return;
+    }
+
+    // Hash the password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    req.body.password = hashedPassword;
+
+    // Create and save the new user
+    const newUser = new User(req.body);
+    await newUser.save();
 
     res.successResponse(
-      removeSensitiveDataFromObject(user),
+      removeSensitiveDataFromObject(newUser),
       201,
       "Registration Successful"
     );
   } catch (error) {
-    res.errorResponse(error.message);
+    console.error(error);
+    res.errorResponse("Internal Server Error");
   }
 });
 
