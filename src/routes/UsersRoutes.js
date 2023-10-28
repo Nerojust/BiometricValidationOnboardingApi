@@ -49,13 +49,12 @@ router.post("/login", async (req, res) => {
     for (const field of requiredFields) {
       // Capitalize the first letter of the field name
       const capitalizedField = field.charAt(0).toUpperCase() + field.slice(1);
-      
+
       if (!req.body[field]) {
         res.errorResponse(`${capitalizedField} is required`);
         return;
       }
     }
-    
 
     const user = await User.findOne({
       $or: [{ username: username }, { fingerprint: fingerPrintKey }],
@@ -110,13 +109,12 @@ router.post("/register", async (req, res) => {
     for (const field of requiredFields) {
       // Capitalize the first letter of the field name
       const capitalizedField = field.charAt(0).toUpperCase() + field.slice(1);
-      
+
       if (!req.body[field]) {
         res.errorResponse(`${capitalizedField} is required`);
         return;
       }
     }
-    
 
     // Check if a user with the same username or phone number already exists
     const existingUser = await User.findOne({
