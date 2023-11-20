@@ -7,16 +7,20 @@ const roleSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
-  permissions: [{
-    resource: {
-      type: String,
-      required: true,
+  permissions: [
+    {
+      resource: {
+        type: String,
+        required: true,
+      },
+      actions: [
+        {
+          type: String,
+          enum: ["get", "post", "patch", "put", "delete"],
+        },
+      ],
     },
-    actions: [{
-      type: String,
-      enum: ["read", "create", "update", "delete"],
-    }],
-  }],
+  ],
 });
 
 // Create a Role model based on the schema

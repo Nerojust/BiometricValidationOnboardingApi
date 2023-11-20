@@ -44,9 +44,7 @@ const verifyToken = (req, res, next) => {
     }
 
     if (req.query.customerId !== req.user.userId) {
-      res.errorResponse(
-        "Invalid user, only logged in user can perform this operation"
-      );
+      res.errorResponse("Invalid Operation, unauthorized user", 403);
       return;
     }
     // verifyAccessRole(req, res);
@@ -75,6 +73,67 @@ const verifyAccessRole = async (req, res, next) => {
   }
   next(); // Continue to the next middleware
 };
+// Middleware to check if the user is a super admin
+const verifyAccessRole2 = (resource) => async (req, res, next) => {
+  const userId = req.query.customerId;
+
+  if (!userId) {
+    res.errorResponse("User ID is required");
+    return;
+  }
+
+  // Find the user's role based on userId
+  const userData = await User.findOne({ _id: userId });
+  if (!userData) {
+    res.errorResponse("User not found", 404);
+    return;
+  }
+
+  const permissionsData = await Role.find();
+  var action = req.method.toLowerCase();
+  // Check if the user has permission
+  const hasPermission = userHasPermission(resource, action);
+  console.log(hasPermission);
+  if (hasPermission) {
+    console.log(
+      `${userData.username} has permission to ${action} ${resource}.`
+    );
+    next();
+  } else {
+    console.log(
+      `${userData.username} does not have permission to ${action} ${resource}.`
+    );
+    res.errorResponse("Permission denied", 403);
+    return;
+  }
+};
+
+// Define a middleware function to check permissions
+async function userHasPermission(resource, action) {
+  return async (req, res, next) => {
+    const userRole = req.user.role; // Assuming the user's role is stored in req.user
+    console.log("role is ", userRole);
+    // Find the user's role in your roles data
+    const role = roles.find((role) => role.name === userRole);
+
+    if (!role) {
+      return res.status(403).json({ error: "Role not found" });
+    }
+    console.log("found role", role);
+    // Check if the role has permission to perform the action on the resource
+    const permission = await role.permissions.find(
+      (perm) =>
+        perm.resource.toLowerCase() === resource.toLowerCase() &&
+        perm.actions.toLowerCase().includes(action)
+    );
+    console.log("data is ", permission);
+    if (permission) {
+      next(); // User has permission, proceed to the next middleware
+    } else {
+      res.status(403).json({ error: "Permission denied" });
+    }
+  };
+}
 
 const verifyCreateDeleteAccessRole = async (req, res, next) => {
   const userId = req.query.customerId;
@@ -127,5 +186,6 @@ module.exports = {
   generateToken,
   verifyToken,
   verifyAccessRole,
+  verifyAccessRole2,
   verifyCreateDeleteAccessRole,
 };

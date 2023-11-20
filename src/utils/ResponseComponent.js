@@ -20,7 +20,7 @@ const formatResponse = (req, res, next) => {
   // Create a successResponse function that wraps the result
   res.successResponse = (result, code = 200, message = Status.SUCCESS) => {
     const response = generateResponse(true, result, [], message);
-    logger.info("Success Response:", response); // Log the response
+    // logger.info("Success Response:", response); // Log the response
     res.status(code).json(response);
   };
 
@@ -32,7 +32,7 @@ const formatResponse = (req, res, next) => {
       [{ message: error }],
       Status.FAILURE
     );
-    logger.error("Error Response:", response); // Log the response
+    // logger.error("Error Response:", response); // Log the response
     res.status(code).json(response);
   };
 

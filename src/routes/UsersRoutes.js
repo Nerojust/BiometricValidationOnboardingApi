@@ -1,7 +1,6 @@
 // routes/users.js
 const express = require("express");
 const router = express.Router();
-const { body, validationResult } = require("express-validator");
 const User = require("../models/User"); // Import the User model
 const logger = require("../utils/Logger");
 const bcrypt = require("bcrypt");
@@ -11,38 +10,25 @@ const {
   verifyToken,
   verifyCreateDeleteAccessRole,
 } = require("../utils/auth/Authentication");
-
-// Validation middleware for user registration
-const validateRegistration = [
-  body("firstName").notEmpty().withMessage("First name is required"),
-  body("lastName").notEmpty().withMessage("Last name is required"),
-  body("phoneNumber")
-    .isMobilePhone("any", { strictMode: false })
-    .withMessage("Invalid phone number"),
-  body("username").notEmpty().withMessage("Username is required"),
-  body("password").notEmpty().withMessage("Password is required"),
-  // body("fingerPrintKey")
-  //   .optional({ nullable: true })
-  //   .isLength({ min: 10 })
-  //   .withMessage("Fingerprint key must be at least 10 characters long"),
-];
-
-// Validation middleware for login
-const validateLogin = [
-  body("username").notEmpty().withMessage("Username is required"),
-  body("password")
-    .notEmpty()
-    .withMessage("Password is required")
-    .isLength({ min: 6 })
-    .withMessage("Password must be at least 6 characters long"),
-  body("fingerPrintKey").optional({ nullable: true }),
-];
+const { encryptRequest, decryptResponse } = require("../utils/Utils");
 
 // Login user
 router.post("/login", async (req, res) => {
+  // const encryptedResponse = {
+  //   data: req.body.data, // Actual encrypted response data
+  //   iv: req.body.iv, // Actual IV
+  //   encryptedSecretKey: req.body.encryptedSecretKey, // Actual encrypted secret key
+  // };
+  // console.log(encryptedResponse);
+  // // Decrypt the response
+  // const decryptedResponse = decryptResponse(encryptedResponse);
+  // console.log("Decrypted Response:", decryptedResponse);
+
   // Extract credentials from request body
+  // const { username, password, fingerPrintKey } = decryptedResponse;
   const { username, password, fingerPrintKey } = req.body;
   logger.info("About to login username " + username);
+
   try {
     const requiredFields = ["username", "password", "fingerPrintKey"];
 
@@ -54,6 +40,10 @@ router.post("/login", async (req, res) => {
         res.errorResponse(`${capitalizedField} is required`);
         return;
       }
+      // if (!decryptedResponse[field]) {
+      //   res.errorResponse(`${capitalizedField} is required`);
+      //   return;
+      // }
     }
 
     const user = await User.findOne({
@@ -79,11 +69,12 @@ router.post("/login", async (req, res) => {
       // Generate a JWT token and send it in the response
       user.accessToken = generateToken(user);
 
-      res.successResponse(
-        removeSensitiveDataFromObject(user),
-        200,
-        "Login Successful"
-      );
+      // // Encrypt the response
+      // const resp = encryptRequest(removeSensitiveDataFromObject(user));
+      // console.log("Encrypted response:", resp);
+
+      // res.successResponse(resp, 200, "Login Successful");
+      res.successResponse(removeSensitiveDataFromObject(user), 200, "Login Successful");
     } else {
       res.errorResponse("Invalid password", 401);
     }

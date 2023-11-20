@@ -8,10 +8,11 @@ const {
   verifyAccessRole,
   verifyToken,
   verifyCreateDeleteAccessRole,
+  verifyAccessRole2,
 } = require("../utils/auth/Authentication");
 
 // Create a new role
-router.post("/", verifyAccessRole, async (req, res) => {
+router.post("/", verifyToken, verifyAccessRole, async (req, res) => {
   try {
     console.log("Role body", req.body);
     const { name, permissions } = req.body;
@@ -22,7 +23,10 @@ router.post("/", verifyAccessRole, async (req, res) => {
     }
     if (
       !permissions.some(
-        (permission) => permission.resource && permission.actions.length > 0
+        (permission) =>
+          permission.resource &&
+          permission.actions &&
+          permission.actions.length > 0
       )
     ) {
       res.errorResponse("At least one permission is required");
@@ -38,7 +42,15 @@ router.post("/", verifyAccessRole, async (req, res) => {
 });
 
 // Get all roles
-router.get("/", async (req, res) => {
+router.get("/", verifyToken, async (req, res) => {
+  console.log(req.route);
+
+  // Split the originalUrl by '/' and get the last element
+  const urlParts = req.originalUrl.split("/");
+  const lastPart = urlParts[urlParts.length - 2];
+
+  console.log("Last part after /:", lastPart);
+
   try {
     const roles = await Role.find();
     res.successResponse(roles);

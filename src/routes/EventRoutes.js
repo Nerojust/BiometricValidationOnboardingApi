@@ -6,11 +6,12 @@ const logger = require("../utils/Logger");
 const {
   verifyToken,
   verifyAccessRole,
+  verifyAccessRole2,
 } = require("../utils/auth/Authentication");
 const Event = require("../models/Event");
 
 //get all events
-router.get("/", verifyToken, verifyAccessRole, async (req, res) => {
+router.get("/", verifyToken, verifyAccessRole2("events"), async (req, res) => {
   try {
     const events = await Event.find();
     res.successResponse(events);
@@ -84,7 +85,7 @@ router.put("/:id", verifyToken, async (req, res) => {
   }
 });
 
-router.delete("/events/:id", verifyToken, async (req, res) => {
+router.delete("/:id", verifyToken, async (req, res) => {
   // Check query parameters (e.g., specific conditions)
   if (req.query.validate === "true") {
     // Perform additional validation logic
